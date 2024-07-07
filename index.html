@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>خريطة مخصصة</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <style>
+        #map {
+            height: 500px;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+        #message {
+            margin-top: 10px;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="form-container">
+        <label for="fname">الاسم:</label>
+        <input type="text" id="fname" name="fname">
+        <label for="action">الإجراء:</label>
+        <input type="text" id="action" name="action">
+        <button onclick="saveData()">حفظ البيانات</button>
+        <button onclick="fetchData()">استرجاع البيانات</button>
+        <div id="message"></div>
+    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script>
+        var map = L.map('map').setView([25.3522, 55.3869], 12); // تحديد الإحداثيات الافتراضية
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: false,
+                polyline: false,
+                circle: false,
+                marker: true,
+                rectangle: true
+            }
+        });
+        map.addControl(drawControl);
+
+        map.on(L.Draw.Event.CREATED, function (event) {
+            var layer = event.layer;
+            drawnItems.addLayer(layer);
+
+            var fname = document.getElementById('fname').value;
+            var action = document.getElementById('action').value;
+
+            if (fname && action) {
+                var latlng = layer.getLatLng();
+                savePoint(latlng, fname, action);
+                layer.bindPopup('<b>' + fname + '</b><br>' + action).openPopup();
+                document.getElementById('fname').value = '';
+                document.getElementById('action').value = '';
+            } else {
+                alert("يرجى إدخال كل من الاسم والإجراء.");
+                drawnItems.removeLayer(layer); // إزالة النقطة إذا كانت البيانات غير مكتملة
+            }
+        });
+
+        function savePoint(latlng, fname, action) {
+            var data = {
+                latitude: latlng.lat,
+                longitude: latlng.lng,
+                fname: fname,
+                action: action
+            };
+
+            var points = JSON.parse(localStorage.getItem('mapPoints')) || [];
+            points.push(data);
+            localStorage.setItem('mapPoints', JSON.stringify(points));
+            showMessage("تم حفظ البيانات محلياً", "success");
+        }
+
+        function saveData() {
+            showMessage("تم حفظ البيانات محلياً", "success");
+        }
+
+        function fetchData() {
+            var points = JSON.parse(localStorage.getItem('mapPoints')) || [];
+            if (points.length === 0) {
+                showMessage("لا توجد بيانات لاسترجاعها.", "error");
+                return;
+            }
+            points.forEach(function(point) {
+                var marker = L.marker([point.latitude, point.longitude]).addTo(map);
+                marker.bindPopup('<b>' + point.fname + '</b><br>' + point.action);
+            });
+            showMessage("تم استرجاع البيانات.", "success");
+        }
+
+        function showMessage(message, type) {
+            var messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = message;
+            messageDiv.style.color = type === "success" ? "green" : "red";
+            setTimeout(function() {
+                messageDiv.innerHTML = "";
+            }, 3000);
+        }
+
+        // تحميل النقاط عند بدء تشغيل الصفحة
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
