@@ -1,13 +1,9 @@
-﻿<?php
-// تحديد ملف البيانات
-$file = 'data.json';
-$points = [];
-
-// قراءة البيانات من الملف إذا كانت موجودة
-if (file_exists($file)) {
-    $points = json_decode(file_get_contents($file), true);
+function fetchData() {
+    var timestamp = new Date().getTime();
+    fetch(`saveData.php?timestamp=${timestamp}`)
+        .then(response => response.json())
+        .then(data => {
+            // معالجة البيانات هنا
+        })
+        .catch(error => console.error('Error fetching data:', error));
 }
-
-// إرجاع البيانات كـ JSON
-echo json_encode($points);
-?>
